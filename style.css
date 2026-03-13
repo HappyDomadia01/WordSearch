@@ -72,7 +72,7 @@ body {
 
 .game-title {
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
   line-height: 0.92;
 }
 
@@ -187,7 +187,16 @@ body {
 }
 
 .board-panel { padding: 18px; }
-.board-area { position: relative; display: flex; justify-content: center; }
+.board-panel { overflow: hidden; }
+.board-area {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
 
 .selection-line {
   position: absolute;
@@ -205,9 +214,10 @@ body {
 
 .word-grid {
   --grid-size: 10;
-  width: min(82vw, 560px);
+  width: min(100%, 560px);
+  max-width: 100%;
   display: grid;
-  grid-template-columns: repeat(var(--grid-size), 1fr);
+  grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
   gap: 7px;
   touch-action: none;
   position: relative;
@@ -372,14 +382,56 @@ body {
 @media (max-width: 900px) {
   .hero-block { flex-direction: column; }
   .header-actions { width: 100%; justify-content: flex-start; }
+  .header-actions > * { flex: 1 1 160px; }
+  .select-wrap { justify-content: space-between; }
   .status-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
   .app-shell { padding: 14px; }
   .game-card { padding: 16px; border-radius: 24px; }
-  .word-grid { width: min(92vw, 460px); gap: 5px; }
-  .grid-cell { border-radius: 12px; font-size: 0.88rem; }
+  .hero-copy { max-width: none; font-size: 0.92rem; }
+  .panel-heading { flex-direction: column; }
+  .progress-meta { white-space: normal; }
+  .word-panel, .board-panel, .status-panel { border-radius: 20px; }
+  .word-panel, .board-panel { padding: 14px; }
+  .word-grid { width: 100%; gap: 4px; }
+  .grid-cell { border-radius: 10px; font-size: clamp(0.72rem, 2.8vw, 0.9rem); }
+  .word-pill { padding: 8px 12px; font-size: 0.8rem; }
   .status-panel { grid-template-columns: 1fr 1fr; }
+  .status-card { padding: 12px 14px; border-radius: 16px; }
+  .status-value { font-size: 1.05rem; }
   .modal-stats { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .app-shell { padding: 10px; }
+  .game-card { padding: 12px; border-radius: 20px; }
+  .game-title { font-size: clamp(1.8rem, 9vw, 2.4rem); }
+  .header-actions { gap: 8px; }
+  .header-actions > * { flex-basis: 100%; width: 100%; }
+  .select-wrap, .action-btn { width: 100%; }
+  .select-wrap { padding: 10px 12px; }
+  .board-panel { padding: 10px; }
+  .word-grid { gap: 3px; }
+  .grid-cell {
+    border-radius: 8px;
+    font-size: clamp(0.66rem, 2.9vw, 0.8rem);
+    border-width: 1px;
+  }
+  .selection-line { height: 6px; }
+  .status-panel { gap: 8px; padding: 12px; }
+}
+
+@media (max-width: 360px) {
+  .app-shell { padding: 8px; }
+  .game-card { padding: 10px; }
+  .word-panel, .board-panel { padding: 10px; }
+  .word-grid { gap: 2px; }
+  .grid-cell {
+    border-radius: 7px;
+    font-size: clamp(0.58rem, 2.7vw, 0.72rem);
+  }
+  .word-pill { padding: 7px 10px; font-size: 0.75rem; }
+  .status-card { padding: 10px 12px; }
 }

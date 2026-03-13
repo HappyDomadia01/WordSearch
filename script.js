@@ -15,14 +15,8 @@ const DIRECTIONS = [
   { row: -1, col: -1 }
 ];
 
-const WORD_BANK = [
-  "VISION", "RETINA", "FOCUS", "OPTIC", "PUPIL", "LENS", "CORNEA", "IRIS",
-  "SCAN", "CLARITY", "SHARPNESS", "GLANCE", "TARGET", "PATTERN", "TRACK",
-  "SIGNAL", "NEURON", "BALANCE", "MOTION", "MEMORY", "ATTENTION", "ANGLES",
-  "THERAPY", "HEALTH", "PRECISION", "REFLEX", "DEPTH", "DETAIL", "FILTER",
-  "BRAIN", "SIGHT", "VISUAL", "LASER", "STIMULUS", "MEDICAL"
-];
-
+const WORD_API_URL = "https://random-word-api.herokuapp.com/word?number=500";
+const WORD_CACHE_KEY = "wordsearch.wordPool.v1";
 const WRONG_SELECTION_PENALTY = 3;
 const COUNTDOWN_BEEP_THRESHOLD = 10;
 
@@ -41,7 +35,9 @@ const state = {
   timeLeft: 180,
   timerId: null,
   hintsLeft: 2,
-  previousSignature: ""
+  previousSignature: "",
+  wordPool: [],
+  isLoading: false
 };
 
 const audioState = {
@@ -81,7 +77,7 @@ function init() {
   initParticles();
   attachEvents();
   applyDifficulty();
-  startGame();
+  startGame().catch(handleStartError);
 }
 
 function attachEvents() {
@@ -91,14 +87,14 @@ function attachEvents() {
   elements.difficultySelect.addEventListener("change", (event) => {
     state.difficulty = event.target.value;
     applyDifficulty();
-    startGame();
+    startGame().catch(handleStartError);
   });
 
-  elements.newGameBtn.addEventListener("click", startGame);
+  elements.newGameBtn.addEventListener("click", () => startGame().catch(handleStartError));
   elements.soundBtn.addEventListener("click", toggleSound);
   elements.retryBtn.addEventListener("click", () => {
     closeGameOver();
-    startGame();
+    startGame().catch(handleStartError);
   });
   elements.hintBtn.addEventListener("click", useHint);
 
@@ -135,13 +131,19 @@ function applyDifficulty() {
   state.hintsLeft = config.hints;
 }
 
-function startGame() {
-  resetStateForRound();
-  buildPuzzle();
-  renderWords();
-  renderGrid();
-  updateHud();
-  startTimer();
+async function startGame() {
+  setLoadingState(true);
+  try {
+    await ensureWordPoolLoaded();
+    resetStateForRound();
+    buildPuzzle();
+    renderWords();
+    renderGrid();
+    updateHud();
+    startTimer();
+  } finally {
+    setLoadingState(false);
+  }
 }
 
 function resetStateForRound() {
@@ -163,14 +165,16 @@ function resetStateForRound() {
   state.timeLeft = config.time;
   state.hintsLeft = config.hints;
   audioState.countdownSecond = null;
-  elements.selectionPreview.textContent = "Drag to select a word";
+  elements.selectionPreview.textContent = state.isLoading ? "Loading words..." : "Drag to select a word";
   elements.grid.style.setProperty("--grid-size", String(state.gridSize));
   syncSoundButton();
 }
 
 function getRoundWords(count) {
+  const eligibleWords = state.wordPool.filter((word) => word.length <= state.gridSize);
+
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const words = shuffle([...WORD_BANK]).filter((word) => word.length <= state.gridSize).slice(0, count);
+    const words = shuffle([...eligibleWords]).slice(0, count);
     const signature = [...words].sort().join("|");
     if (words.length === count && signature !== state.previousSignature) {
       state.previousSignature = signature;
@@ -178,7 +182,10 @@ function getRoundWords(count) {
     }
   }
 
-  const fallback = shuffle([...WORD_BANK]).filter((word) => word.length <= state.gridSize).slice(0, count);
+  const fallback = shuffle([...eligibleWords]).slice(0, count);
+  if (fallback.length < count) {
+    throw new Error(`Not enough API words available for a ${state.gridSize}x${state.gridSize} board.`);
+  }
   state.previousSignature = [...fallback].sort().join("|");
   return fallback;
 }
@@ -557,11 +564,20 @@ function useHint() {
 
   state.hintsLeft -= 1;
   updateHud();
-  showToast(`Hint: starts with ${word[0]}`);
 
   if (firstCell) {
-    firstCell.classList.add("hint");
-    window.setTimeout(() => firstCell.classList.remove("hint"), 1600);
+    elements.boardArea.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      firstCell.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      firstCell.classList.add("hint");
+      showToast("Hint revealed on grid");
+
+      window.setTimeout(() => {
+        firstCell.classList.remove("hint");
+      }, 1800);
+    }, 380);
+  } else {
+    showToast(`Hint: ${word[0]}`);
   }
 }
 
@@ -615,6 +631,99 @@ function showToast(message) {
 
 function clearToast() {
   elements.toastMessage.classList.remove("show");
+}
+
+async function ensureWordPoolLoaded() {
+  if (state.wordPool.length) {
+    return;
+  }
+
+  const cachedWords = readCachedWordPool();
+  if (cachedWords.length) {
+    state.wordPool = cachedWords;
+    return;
+  }
+
+  const response = await fetch(WORD_API_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Word API request failed with status ${response.status}.`);
+  }
+
+  const payload = await response.json();
+  const words = sanitizeWordPool(payload);
+  if (!words.length) {
+    throw new Error("Word API returned no usable words.");
+  }
+
+  state.wordPool = words;
+  writeCachedWordPool(words);
+}
+
+function sanitizeWordPool(payload) {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  const uniqueWords = new Set();
+  payload.forEach((entry) => {
+    if (typeof entry !== "string") {
+      return;
+    }
+
+    const cleanWord = entry.trim().replace(/[^a-z]/gi, "").toUpperCase();
+    if (cleanWord.length >= 3) {
+      uniqueWords.add(cleanWord);
+    }
+  });
+
+  return [...uniqueWords];
+}
+
+function readCachedWordPool() {
+  try {
+    const raw = window.localStorage.getItem(WORD_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return sanitizeWordPool(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedWordPool(words) {
+  try {
+    window.localStorage.setItem(WORD_CACHE_KEY, JSON.stringify(words));
+  } catch {
+    // Ignore storage issues and continue with in-memory words.
+  }
+}
+
+function setLoadingState(isLoading) {
+  state.isLoading = isLoading;
+  elements.newGameBtn.disabled = isLoading;
+  elements.hintBtn.disabled = isLoading;
+  elements.difficultySelect.disabled = isLoading;
+  if (isLoading) {
+    elements.selectionPreview.textContent = "Loading words...";
+    showToast("Fetching words from API...");
+  }
+}
+
+function handleStartError(error) {
+  console.error(error);
+  setLoadingState(false);
+  stopTimer();
+  state.isSelecting = false;
+  state.selectedCells = [];
+  clearTemporarySelection();
+  hideSelectionLine();
+  elements.grid.innerHTML = "";
+  elements.wordList.innerHTML = "";
+  elements.selectionPreview.textContent = "Unable to load words";
+  showToast("API se words load nahi huye.");
 }
 
 function formatTime(totalSeconds) {
