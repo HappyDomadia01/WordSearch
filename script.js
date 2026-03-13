@@ -15,8 +15,12 @@ const DIRECTIONS = [
   { row: -1, col: -1 }
 ];
 
-const WORD_API_URL = "https://random-word-api.herokuapp.com/word?number=500";
-const WORD_CACHE_KEY = "wordsearch.wordPool.v1";
+const WORD_API_URLS = [
+  "https://api.datamuse.com/words?ml=health&max=100",
+  "https://api.datamuse.com/words?ml=eye&max=100",
+  "https://api.datamuse.com/words?ml=hospital&max=100"
+];
+const WORD_CACHE_KEY = "wordsearch.wordPool.datamuse.v1";
 const WRONG_SELECTION_PENALTY = 3;
 const COUNTDOWN_BEEP_THRESHOLD = 10;
 
@@ -644,13 +648,18 @@ async function ensureWordPoolLoaded() {
     return;
   }
 
-  const response = await fetch(WORD_API_URL, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Word API request failed with status ${response.status}.`);
-  }
+  const responses = await Promise.all(
+    WORD_API_URLS.map(async (url) => {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`Word API request failed with status ${response.status}.`);
+      }
 
-  const payload = await response.json();
-  const words = sanitizeWordPool(payload);
+      return response.json();
+    })
+  );
+
+  const words = sanitizeWordPool(responses.flat());
   if (!words.length) {
     throw new Error("Word API returned no usable words.");
   }
@@ -666,11 +675,12 @@ function sanitizeWordPool(payload) {
 
   const uniqueWords = new Set();
   payload.forEach((entry) => {
-    if (typeof entry !== "string") {
+    const rawWord = typeof entry === "string" ? entry : entry?.word;
+    if (typeof rawWord !== "string") {
       return;
     }
 
-    const cleanWord = entry.trim().replace(/[^a-z]/gi, "").toUpperCase();
+    const cleanWord = rawWord.trim().replace(/[^a-z]/gi, "").toUpperCase();
     if (cleanWord.length >= 3) {
       uniqueWords.add(cleanWord);
     }

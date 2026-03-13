@@ -105,9 +105,11 @@ body {
 .select-wrap select {
   border: 0;
   outline: 0;
-  background: transparent;
-  color: var(--text);
+  background: #000;
+  color: #fff;
   font: inherit;
+  border-radius: 999px;
+  padding: 6px 10px;
 }
 
 .action-btn {
