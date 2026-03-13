@@ -242,6 +242,13 @@ body {
   box-shadow: 0 0 20px rgba(255, 217, 90, 0.26);
 }
 
+.grid-cell.error {
+  background: linear-gradient(180deg, rgba(255, 91, 110, 0.28), rgba(255, 91, 110, 0.1));
+  border-color: rgba(255, 91, 110, 0.85);
+  box-shadow: 0 0 22px rgba(255, 91, 110, 0.22);
+  animation: wrongFlash 420ms ease;
+}
+
 .grid-cell.found {
   background: linear-gradient(180deg, rgba(78, 227, 141, 0.22), rgba(78, 227, 141, 0.08));
   border-color: rgba(78, 227, 141, 0.75);
@@ -360,6 +367,7 @@ body {
 @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 @keyframes explode { 0% { transform: scale(1); } 50% { transform: scale(1.14); } 100% { transform: scale(1); } }
 @keyframes hintPulse { 0%, 100% { box-shadow: 0 0 0 rgba(69, 208, 213, 0); } 50% { box-shadow: 0 0 20px rgba(69, 208, 213, 0.4); } }
+@keyframes wrongFlash { 0% { transform: translateX(0) scale(1); } 20% { transform: translateX(-3px) scale(1.03); } 40% { transform: translateX(3px) scale(0.99); } 60% { transform: translateX(-2px) scale(1.01); } 100% { transform: translateX(0) scale(1); } }
 
 @media (max-width: 900px) {
   .hero-block { flex-direction: column; }

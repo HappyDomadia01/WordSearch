@@ -23,6 +23,9 @@ const WORD_BANK = [
   "BRAIN", "SIGHT", "VISUAL", "LASER", "STIMULUS", "MEDICAL"
 ];
 
+const WRONG_SELECTION_PENALTY = 3;
+const COUNTDOWN_BEEP_THRESHOLD = 10;
+
 const state = {
   difficulty: "medium",
   gridSize: 10,
@@ -41,9 +44,18 @@ const state = {
   previousSignature: ""
 };
 
+const audioState = {
+  context: null,
+  masterGain: null,
+  countdownSecond: null,
+  enabled: true,
+  ready: false
+};
+
 const elements = {
   particlesCanvas: document.getElementById("particlesCanvas"),
   difficultySelect: document.getElementById("difficultySelect"),
+  soundBtn: document.getElementById("soundBtn"),
   hintBtn: document.getElementById("hintBtn"),
   newGameBtn: document.getElementById("newGameBtn"),
   retryBtn: document.getElementById("retryBtn"),
@@ -73,6 +85,9 @@ function init() {
 }
 
 function attachEvents() {
+  window.addEventListener("pointerdown", unlockAudio, { passive: true });
+  window.addEventListener("keydown", unlockAudio);
+
   elements.difficultySelect.addEventListener("change", (event) => {
     state.difficulty = event.target.value;
     applyDifficulty();
@@ -80,6 +95,7 @@ function attachEvents() {
   });
 
   elements.newGameBtn.addEventListener("click", startGame);
+  elements.soundBtn.addEventListener("click", toggleSound);
   elements.retryBtn.addEventListener("click", () => {
     closeGameOver();
     startGame();
@@ -146,8 +162,10 @@ function resetStateForRound() {
   state.lastFoundAt = 0;
   state.timeLeft = config.time;
   state.hintsLeft = config.hints;
+  audioState.countdownSecond = null;
   elements.selectionPreview.textContent = "Drag to select a word";
   elements.grid.style.setProperty("--grid-size", String(state.gridSize));
+  syncSoundButton();
 }
 
 function getRoundWords(count) {
@@ -316,6 +334,7 @@ function startTimer() {
   state.timerId = window.setInterval(() => {
     state.timeLeft -= 1;
     updateHud();
+    playCountdownCue();
 
     if (state.timeLeft <= 0) {
       state.timeLeft = 0;
@@ -351,6 +370,7 @@ function closeGameOver() {
 }
 
 function beginSelection(cell) {
+  unlockAudio();
   clearTemporarySelection();
   state.selectedCells = [cell];
   state.isSelecting = true;
@@ -394,6 +414,7 @@ function finishSelection() {
       markWordFound(match);
     }
   } else {
+    applyMistakePenalty();
     clearTemporarySelection();
   }
 
@@ -469,6 +490,10 @@ function markWordFound(word) {
 
   state.score += points;
   state.foundWords.add(word);
+  playWordFoundCue();
+  if (state.comboCount >= 2) {
+    playComboCue(state.comboCount);
+  }
 
   const placement = state.placements.get(word);
   placement.cells.forEach((cellKey) => {
@@ -489,9 +514,30 @@ function markWordFound(word) {
 
   if (state.foundWords.size === state.words.length) {
     stopTimer();
+    playVictoryCue();
     showToast("Board cleared. New challenge loaded.");
     window.setTimeout(startGame, 1200);
   }
+}
+
+function applyMistakePenalty() {
+  if (!state.selectedCells.length) {
+    return;
+  }
+
+  const penalty = Math.min(WRONG_SELECTION_PENALTY, state.score);
+  state.score = Math.max(0, state.score - WRONG_SELECTION_PENALTY);
+  state.comboCount = 1;
+  state.lastFoundAt = 0;
+  updateHud();
+
+  state.selectedCells.forEach((cell) => {
+    cell.classList.add("error");
+    window.setTimeout(() => cell.classList.remove("error"), 420);
+  });
+
+  playMistakeCue();
+  showToast(penalty > 0 ? `Wrong letters -${penalty}` : "Wrong letters");
 }
 
 function useHint() {
@@ -583,6 +629,160 @@ function shuffle(array) {
     [array[index], array[swapIndex]] = [array[swapIndex], array[index]];
   }
   return array;
+}
+
+function unlockAudio() {
+  if (!audioState.enabled) {
+    return;
+  }
+
+  const context = getAudioContext();
+  if (context && context.state === "suspended") {
+    context.resume()
+      .then(() => {
+        audioState.ready = true;
+        syncSoundButton();
+      })
+      .catch(() => {});
+    return;
+  }
+
+  if (context && context.state === "running") {
+    audioState.ready = true;
+    syncSoundButton();
+  }
+}
+
+function getAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    return null;
+  }
+
+  if (!audioState.context) {
+    audioState.context = new AudioContextClass();
+    audioState.masterGain = audioState.context.createGain();
+    audioState.masterGain.gain.value = 0.28;
+    audioState.masterGain.connect(audioState.context.destination);
+  }
+
+  return audioState.context;
+}
+
+function playCue(sequence, options = {}) {
+  const context = getAudioContext();
+  if (!audioState.enabled || !context || context.state !== "running") {
+    return;
+  }
+
+  const type = options.type || "sine";
+  const volume = options.volume ?? 0.12;
+  const attack = options.attack ?? 0.01;
+  const release = options.release ?? 0.16;
+  const now = context.currentTime + 0.01;
+
+  sequence.forEach((note, index) => {
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    const start = now + (note.at ?? index * 0.11);
+    const duration = note.duration ?? 0.12;
+
+    oscillator.type = note.type || type;
+    oscillator.frequency.setValueAtTime(note.frequency, start);
+    gainNode.gain.setValueAtTime(0.0001, start);
+    gainNode.gain.linearRampToValueAtTime(volume, start + attack);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, start + duration + release);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioState.masterGain);
+    oscillator.start(start);
+    oscillator.stop(start + duration + release + 0.02);
+  });
+}
+
+function toggleSound() {
+  audioState.enabled = !audioState.enabled;
+
+  if (!audioState.enabled) {
+    audioState.ready = false;
+    if (audioState.masterGain) {
+      audioState.masterGain.gain.value = 0;
+    }
+    syncSoundButton();
+    showToast("Sound off");
+    return;
+  }
+
+  if (audioState.masterGain) {
+    audioState.masterGain.gain.value = 0.28;
+  }
+
+  unlockAudio();
+  syncSoundButton();
+  playWordFoundCue();
+  showToast(audioState.ready ? "Sound on" : "Tap again to unlock sound");
+}
+
+function syncSoundButton() {
+  if (!elements.soundBtn) {
+    return;
+  }
+
+  const label = !audioState.enabled
+    ? "Sound: Off"
+    : audioState.ready
+      ? "Sound: On"
+      : "Sound: Tap";
+
+  elements.soundBtn.textContent = label;
+  elements.soundBtn.setAttribute("aria-pressed", String(audioState.enabled));
+}
+
+function playWordFoundCue() {
+  playCue([
+    { frequency: 523.25, duration: 0.08 },
+    { frequency: 659.25, at: 0.08, duration: 0.12 }
+  ], { type: "triangle", volume: 0.1, release: 0.12 });
+}
+
+function playComboCue(comboCount) {
+  const accentFrequency = comboCount >= 4 ? 1046.5 : 880;
+  playCue([
+    { frequency: 698.46, duration: 0.07 },
+    { frequency: accentFrequency, at: 0.07, duration: 0.15 }
+  ], { type: "square", volume: 0.08, release: 0.1 });
+}
+
+function playCountdownCue() {
+  if (state.timeLeft <= 0 || state.timeLeft > COUNTDOWN_BEEP_THRESHOLD) {
+    return;
+  }
+
+  if (audioState.countdownSecond === state.timeLeft) {
+    return;
+  }
+
+  audioState.countdownSecond = state.timeLeft;
+  const urgent = state.timeLeft <= 3;
+  playCue([
+    { frequency: urgent ? 880 : 740, duration: urgent ? 0.12 : 0.08 }
+  ], { type: urgent ? "square" : "sine", volume: urgent ? 0.09 : 0.06, release: 0.08 });
+}
+
+function playVictoryCue() {
+  playCue([
+    { frequency: 523.25, duration: 0.08 },
+    { frequency: 659.25, at: 0.1, duration: 0.1 },
+    { frequency: 783.99, at: 0.2, duration: 0.12 },
+    { frequency: 1046.5, at: 0.34, duration: 0.22 }
+  ], { type: "triangle", volume: 0.12, release: 0.16 });
+}
+
+function playMistakeCue() {
+  playCue([
+    { frequency: 220, duration: 0.08, type: "sawtooth" },
+    { frequency: 180, at: 0.06, duration: 0.12, type: "sawtooth" }
+  ], { volume: 0.05, release: 0.08 });
 }
 
 function initParticles() {
