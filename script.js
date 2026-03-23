@@ -15,14 +15,54 @@ const DIRECTIONS = [
   { row: -1, col: -1 }
 ];
 
-const WORD_API_URLS = [
-  "https://api.datamuse.com/words?ml=health&max=100",
-  "https://api.datamuse.com/words?ml=eye&max=100",
-  "https://api.datamuse.com/words?ml=hospital&max=100"
+const uniqueWords = [
+"eye","vision","sight","lens","iris","pupil","retina","cornea","tear","blink",
+"eyelid","eyeball","glasses","contact","focus","light","color","blindness",
+"redness","itching","dryeye","watering","screen","reading","distance","near",
+"far","clarity","shadow","image","checkup","testing","laser","drops","medicine",
+"infection","pressure","field","central","sidevision","eyecare","eyeexam",
+"eyetest","visioncare","brightness","contrast","tracking","alignment",
+"face","head","skin","nerve","muscle","pain","swelling","injury","healing",
+"treatment","therapy","clinic","doctor","nurse","hospital","patient","health",
+"bone","joint","spine","hip","knee","elbow","wrist","ankle","skull","rib",
+"shoulder","neck","back","finger","toe","leg","arm","heel","thigh","waist",
+"walking","running","standing","sitting","bending","lifting","turning",
+"stretch","exercise","balance","motion","movement","support","posture",
+"strength","mobility","control","stability","activity","practice",
+"fracture","sprain","strain","trauma","cut","bruise","painful",
+"stiffness","weakness","damage","recovery","repair","rest",
+"bandage","brace","cast","crutch","walker","supportbelt",
+"tendon","ligament","tissue","jointpain","backpain",
+"kneepain","legpain","footpain","shoulderpain","heelpain",
+"fitness","diet","sleep","energy","stress","relief","care",
+"screening","safety","clean","hygiene","tablet","capsule",
+"ointment","cream",
+"heart","lungs","blood","pulse","breath","oxygen","brain",
+"circulation","sugar","weight","height","temperature",
+"walkingstick","supportshoe","exerciseband","stretching","training",
+"relax","comfort","movementcare","bodycare","jointcare","eyewash",
+"visiontest","healthcheck","posturecare","sleepcare",
+"help","safe","strong","active","healthy","better","normal",
+"simple","clear","guide","supportive","fit",
+"steady","improve","protect","prevent","relaxation","comfortcare",
+"fever","cough","cold","allergy","headache","migraine","nausea",
+"vomiting","diarrhea","constipation","dizziness","fatigue",
+"hydration","dehydration","appetite","digestion","stomach",
+"liver","kidney","bladder","urine","throat","tongue",
+"teeth","gums","jaw","chest","shoulderblade","hand","palm",
+"wristband","fingerjoint","toenail","heelbone","kneecap",
+"backbone","posturecheck","bodyweight","stepcount","walkingaid",
+"eyestrain","eyesightcheck","eyepressure","jointsupport",
+"bonestrength","musclecare","painrelief","firstaid",
+"healthcare","wellbeing","medical","cardio","flexibility",
+"weightloss","wellness"
 ];
-const WORD_CACHE_KEY = "wordsearch.wordPool.datamuse.v1";
-const WRONG_SELECTION_PENALTY = 3;
+const WRONG_SELECTION_PENALTY = 5;
 const COUNTDOWN_BEEP_THRESHOLD = 10;
+const MASTER_VOLUME = 0.45;
+const HINT_BLINK_DURATION_MS = 1600;
+const HINT_CUE_INTERVAL_MS = 320;
+const LOCAL_WORD_POOL = sanitizeWordPool(uniqueWords);
 
 const state = {
   difficulty: "medium",
@@ -40,7 +80,6 @@ const state = {
   timerId: null,
   hintsLeft: 2,
   previousSignature: "",
-  wordPool: [],
   isLoading: false
 };
 
@@ -81,7 +120,7 @@ function init() {
   initParticles();
   attachEvents();
   applyDifficulty();
-  startGame().catch(handleStartError);
+  startGame();
 }
 
 function attachEvents() {
@@ -91,14 +130,14 @@ function attachEvents() {
   elements.difficultySelect.addEventListener("change", (event) => {
     state.difficulty = event.target.value;
     applyDifficulty();
-    startGame().catch(handleStartError);
+    startGame();
   });
 
-  elements.newGameBtn.addEventListener("click", () => startGame().catch(handleStartError));
+  elements.newGameBtn.addEventListener("click", startGame);
   elements.soundBtn.addEventListener("click", toggleSound);
   elements.retryBtn.addEventListener("click", () => {
     closeGameOver();
-    startGame().catch(handleStartError);
+    startGame();
   });
   elements.hintBtn.addEventListener("click", useHint);
 
@@ -135,16 +174,17 @@ function applyDifficulty() {
   state.hintsLeft = config.hints;
 }
 
-async function startGame() {
+function startGame() {
   setLoadingState(true);
   try {
-    await ensureWordPoolLoaded();
     resetStateForRound();
     buildPuzzle();
     renderWords();
     renderGrid();
     updateHud();
     startTimer();
+  } catch (error) {
+    handleStartError(error);
   } finally {
     setLoadingState(false);
   }
@@ -175,7 +215,7 @@ function resetStateForRound() {
 }
 
 function getRoundWords(count) {
-  const eligibleWords = state.wordPool.filter((word) => word.length <= state.gridSize);
+  const eligibleWords = LOCAL_WORD_POOL.filter((word) => word.length <= state.gridSize);
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const words = shuffle([...eligibleWords]).slice(0, count);
@@ -188,7 +228,7 @@ function getRoundWords(count) {
 
   const fallback = shuffle([...eligibleWords]).slice(0, count);
   if (fallback.length < count) {
-    throw new Error(`Not enough API words available for a ${state.gridSize}x${state.gridSize} board.`);
+    throw new Error(`Not enough local words available for a ${state.gridSize}x${state.gridSize} board.`);
   }
   state.previousSignature = [...fallback].sort().join("|");
   return fallback;
@@ -574,6 +614,7 @@ function useHint() {
     window.setTimeout(() => {
       firstCell.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
       firstCell.classList.add("hint");
+      syncHintCueToBlink(firstCell);
       showToast("Hint revealed on grid");
 
       window.setTimeout(() => {
@@ -637,37 +678,6 @@ function clearToast() {
   elements.toastMessage.classList.remove("show");
 }
 
-async function ensureWordPoolLoaded() {
-  if (state.wordPool.length) {
-    return;
-  }
-
-  const cachedWords = readCachedWordPool();
-  if (cachedWords.length) {
-    state.wordPool = cachedWords;
-    return;
-  }
-
-  const responses = await Promise.all(
-    WORD_API_URLS.map(async (url) => {
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`Word API request failed with status ${response.status}.`);
-      }
-
-      return response.json();
-    })
-  );
-
-  const words = sanitizeWordPool(responses.flat());
-  if (!words.length) {
-    throw new Error("Word API returned no usable words.");
-  }
-
-  state.wordPool = words;
-  writeCachedWordPool(words);
-}
-
 function sanitizeWordPool(payload) {
   if (!Array.isArray(payload)) {
     return [];
@@ -689,36 +699,14 @@ function sanitizeWordPool(payload) {
   return [...uniqueWords];
 }
 
-function readCachedWordPool() {
-  try {
-    const raw = window.localStorage.getItem(WORD_CACHE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw);
-    return sanitizeWordPool(parsed);
-  } catch {
-    return [];
-  }
-}
-
-function writeCachedWordPool(words) {
-  try {
-    window.localStorage.setItem(WORD_CACHE_KEY, JSON.stringify(words));
-  } catch {
-    // Ignore storage issues and continue with in-memory words.
-  }
-}
-
 function setLoadingState(isLoading) {
   state.isLoading = isLoading;
   elements.newGameBtn.disabled = isLoading;
   elements.hintBtn.disabled = isLoading;
   elements.difficultySelect.disabled = isLoading;
   if (isLoading) {
-    elements.selectionPreview.textContent = "Loading words...";
-    showToast("Fetching words from API...");
+    elements.selectionPreview.textContent = "Preparing board...";
+    showToast("Preparing local words...");
   }
 }
 
@@ -733,7 +721,7 @@ function handleStartError(error) {
   elements.grid.innerHTML = "";
   elements.wordList.innerHTML = "";
   elements.selectionPreview.textContent = "Unable to load words";
-  showToast("API se words load nahi huye.");
+  showToast("Local words load nahi huye.");
 }
 
 function formatTime(totalSeconds) {
@@ -781,7 +769,7 @@ function getAudioContext() {
   if (!audioState.context) {
     audioState.context = new AudioContextClass();
     audioState.masterGain = audioState.context.createGain();
-    audioState.masterGain.gain.value = 0.28;
+    audioState.masterGain.gain.value = MASTER_VOLUME;
     audioState.masterGain.connect(audioState.context.destination);
   }
 
@@ -795,7 +783,7 @@ function playCue(sequence, options = {}) {
   }
 
   const type = options.type || "sine";
-  const volume = options.volume ?? 0.12;
+  const volume = options.volume ?? 0.18;
   const attack = options.attack ?? 0.01;
   const release = options.release ?? 0.16;
   const now = context.currentTime + 0.01;
@@ -833,7 +821,7 @@ function toggleSound() {
   }
 
   if (audioState.masterGain) {
-    audioState.masterGain.gain.value = 0.28;
+    audioState.masterGain.gain.value = MASTER_VOLUME;
   }
 
   unlockAudio();
@@ -861,7 +849,7 @@ function playWordFoundCue() {
   playCue([
     { frequency: 523.25, duration: 0.08 },
     { frequency: 659.25, at: 0.08, duration: 0.12 }
-  ], { type: "triangle", volume: 0.1, release: 0.12 });
+  ], { type: "triangle", volume: 0.16, release: 0.12 });
 }
 
 function playComboCue(comboCount) {
@@ -869,7 +857,7 @@ function playComboCue(comboCount) {
   playCue([
     { frequency: 698.46, duration: 0.07 },
     { frequency: accentFrequency, at: 0.07, duration: 0.15 }
-  ], { type: "square", volume: 0.08, release: 0.1 });
+  ], { type: "square", volume: 0.13, release: 0.1 });
 }
 
 function playCountdownCue() {
@@ -885,7 +873,7 @@ function playCountdownCue() {
   const urgent = state.timeLeft <= 3;
   playCue([
     { frequency: urgent ? 880 : 740, duration: urgent ? 0.12 : 0.08 }
-  ], { type: urgent ? "square" : "sine", volume: urgent ? 0.09 : 0.06, release: 0.08 });
+  ], { type: urgent ? "square" : "sine", volume: urgent ? 0.14 : 0.1, release: 0.08 });
 }
 
 function playVictoryCue() {
@@ -894,14 +882,70 @@ function playVictoryCue() {
     { frequency: 659.25, at: 0.1, duration: 0.1 },
     { frequency: 783.99, at: 0.2, duration: 0.12 },
     { frequency: 1046.5, at: 0.34, duration: 0.22 }
-  ], { type: "triangle", volume: 0.12, release: 0.16 });
+  ], { type: "triangle", volume: 0.18, release: 0.16 });
+}
+
+function playHintCue() {
+  playCue([
+    { frequency: 587.33, duration: 0.08 },
+    { frequency: 783.99, at: 0.08, duration: 0.14 }
+  ], { type: "sine", volume: 0.12, release: 0.14 });
+}
+
+function syncHintCueToBlink(cell) {
+  if (!cell) {
+    return;
+  }
+
+  let cueTimerId = null;
+  let fallbackStopId = null;
+
+  const stopLoop = () => {
+    cell.removeEventListener("animationstart", handleAnimationStart);
+    cell.removeEventListener("animationend", handleAnimationEnd);
+    if (cueTimerId) {
+      window.clearInterval(cueTimerId);
+      cueTimerId = null;
+    }
+    if (fallbackStopId) {
+      window.clearTimeout(fallbackStopId);
+      fallbackStopId = null;
+    }
+  };
+
+  const startLoop = () => {
+    if (cueTimerId) {
+      return;
+    }
+    playHintCue();
+    cueTimerId = window.setInterval(() => {
+      playHintCue();
+    }, HINT_CUE_INTERVAL_MS);
+    fallbackStopId = window.setTimeout(stopLoop, HINT_BLINK_DURATION_MS + 120);
+  };
+
+  const handleAnimationStart = (event) => {
+    if (event.animationName === "hintPulse") {
+      startLoop();
+    }
+  };
+
+  const handleAnimationEnd = (event) => {
+    if (event.animationName === "hintPulse") {
+      stopLoop();
+    }
+  };
+
+  cell.addEventListener("animationstart", handleAnimationStart);
+  cell.addEventListener("animationend", handleAnimationEnd);
+  window.setTimeout(startLoop, 60);
 }
 
 function playMistakeCue() {
   playCue([
     { frequency: 220, duration: 0.08, type: "sawtooth" },
     { frequency: 180, at: 0.06, duration: 0.12, type: "sawtooth" }
-  ], { volume: 0.05, release: 0.08 });
+  ], { volume: 0.09, release: 0.08 });
 }
 
 function initParticles() {
