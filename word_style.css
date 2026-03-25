@@ -59,7 +59,7 @@ body {
   justify-content: space-between;
   gap: 20px;
   align-items: flex-start;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
 }
 
 .eyebrow {
@@ -90,6 +90,8 @@ body {
   justify-content: flex-end;
 }
 
+/* Size decreased to 120x36px, undone per request */
+
 .select-wrap {
   display: flex;
   align-items: center;
@@ -116,12 +118,18 @@ body {
 .action-btn {
   border: 0;
   border-radius: 999px;
-  padding: 12px 18px;
+  padding: 10px 10px;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
   white-space: nowrap;
+  line-height: 1;
+  font-size: 1.1em;
+}
+
+.action-btn#soundBtn {
+  font-size: 1.1em;
 }
 
 .action-btn:hover { transform: translateY(-1px); }
@@ -129,6 +137,12 @@ body {
   color: #04111a;
   background: linear-gradient(90deg, var(--yellow), #ffb74f);
   box-shadow: 0 10px 28px rgba(255, 217, 90, 0.28);
+}
+.action-btn.primary2 {
+  color: #04111a;
+  background: linear-gradient(90deg, var(--yellow), #ffb74f);
+  box-shadow: 0 10px 28px rgba(255, 217, 90, 0.28);
+  padding: 5px 30px;
 }
 
 .action-btn.secondary {
@@ -150,7 +164,7 @@ body {
   justify-content: space-between;
   gap: 4px;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
 .panel-heading h2 { margin: 0 0 4px; font-size: 1rem; }
@@ -303,7 +317,7 @@ body {
   display: block;
   color: var(--muted);
   font-size: 0.78rem;
-  /* margin-bottom: 4px; */
+  margin-bottom: -2px;
 }
 
 .status-value {
@@ -415,7 +429,7 @@ body {
 
 @media (max-width: 430px) {
   .app-shell { padding: 10px; }
-  .game-card { padding: 12px; border-radius: 20px; }
+  .game-card { padding: 10px 10px 3px 10px; border-radius: 20px; }
   .game-title { font-size: clamp(1.8rem, 9vw, 2.4rem); }
   .header-actions { gap: 5px; }
   .header-actions > * { flex-basis: 100%; width: 100%; }
@@ -471,3 +485,6 @@ body {
 #progressLabel {
   white-space: nowrap;
 }
+
+
+

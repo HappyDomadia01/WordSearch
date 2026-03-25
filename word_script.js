@@ -835,14 +835,18 @@ function syncSoundButton() {
     return;
   }
 
-  const label = !audioState.enabled
-    ? "Sound: Off"
-    : audioState.ready
-      ? "Sound: On"
-      : "Sound: Tap";
-
-  elements.soundBtn.textContent = label;
+if (!audioState.enabled) {
+    elements.soundBtn.textContent = '🔇';
+    elements.soundBtn.title = 'Sound off - Click to turn on';
+  } else if (audioState.ready) {
+    elements.soundBtn.textContent = '🔊';
+    elements.soundBtn.title = 'Sound on - Click to turn off';
+  } else {
+    elements.soundBtn.textContent = '🔊';
+    elements.soundBtn.title = 'Tap to enable sound';
+  }
   elements.soundBtn.setAttribute("aria-pressed", String(audioState.enabled));
+  elements.soundBtn.setAttribute("aria-label", audioState.enabled ? "Sound on, click to turn off" : "Sound off, click to turn on");
 }
 
 function playWordFoundCue() {
