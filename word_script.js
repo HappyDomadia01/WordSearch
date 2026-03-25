@@ -831,24 +831,31 @@ function toggleSound() {
 }
 
 function syncSoundButton() {
-  if (!elements.soundBtn) {
-    return;
+  if (!elements.soundBtn) return;
+
+  const icon = elements.soundBtn.querySelector("i");
+
+  if (!audioState.enabled) {
+    icon.className = "bi bi-volume-mute-fill";
+    elements.soundBtn.title = "Sound off - Click to turn on";
+  } 
+  else if (audioState.ready) {
+    icon.className = "bi bi-volume-up-fill";
+    elements.soundBtn.title = "Sound on - Click to turn off";
+  } 
+  else {
+    icon.className = "bi bi-volume-up";
+    elements.soundBtn.title = "Tap to enable sound";
   }
 
-if (!audioState.enabled) {
-    elements.soundBtn.textContent = '🔇';
-    elements.soundBtn.title = 'Sound off - Click to turn on';
-  } else if (audioState.ready) {
-    elements.soundBtn.textContent = '🔊';
-    elements.soundBtn.title = 'Sound on - Click to turn off';
-  } else {
-    elements.soundBtn.textContent = '🔊';
-    elements.soundBtn.title = 'Tap to enable sound';
-  }
   elements.soundBtn.setAttribute("aria-pressed", String(audioState.enabled));
-  elements.soundBtn.setAttribute("aria-label", audioState.enabled ? "Sound on, click to turn off" : "Sound off, click to turn on");
+  elements.soundBtn.setAttribute(
+    "aria-label",
+    audioState.enabled
+      ? "Sound on, click to turn off"
+      : "Sound off, click to turn on"
+  );
 }
-
 function playWordFoundCue() {
   playCue([
     { frequency: 523.25, duration: 0.08 },
