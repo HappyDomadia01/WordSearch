@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Word Game</title>
 </xai:function_call name="edit_file">
-<parameter name="path">WordSearch/word_index.html
+<!-- <parameter name="path">WordSearch/word_index.html -->
   <link rel="stylesheet" href="word_style.css">
 </head>
 <body>
@@ -17,16 +17,24 @@
 <h1 class="game-title">Word Search</h1>
         </div> -->
         <div class="header-actions">
-          <label class="select-wrap" for="difficultySelect">
+          <!-- <label class="select-wrap" for="difficultySelect">
             <span>Difficulty</span>
             <select id="difficultySelect">
               <option value="easy">Easy</option>
               <option value="medium" selected>Medium</option>
               <option value="hard">Hard</option>
             </select>
-          </label>
+          </label> -->
+            <label class="select-wrap" for="difficultySelect">
+    <span>Difficulty</span>
+    <select id="difficultySelect">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </label>
           <button id="soundBtn" class="action-btn secondary" type="button" aria-pressed="true">Sound: On</button>
-          <button id="hintBtn" class="action-btn secondary" type="button">Hint</button>
+          <!-- <button id="hintBtn" class="action-btn secondary" type="button">Hint</button> -->
           <button id="newGameBtn" class="action-btn primary" type="button">New Game</button>
         </div>
       </header>
@@ -36,11 +44,35 @@
             <!-- <h2>Target Words</h2> -->
             <p>Find all hidden words before the timer ends.</p>
           </div>
-          <div class="progress-meta">
+          <!-- <div class="progress-meta">
             <span id="progressLabel">0 / 0 Found</span>
-          </div>
+          </div> -->
         </div>
         <div id="wordList" class="word-list"></div>
+        <div class="progress-meta">
+            <!-- <span id="progressLabel">0 / 0 Found</span>
+          </div>
+          <label class="select-wrap" for="difficultySelect">
+            <span>Difficulty</span>
+            <select id="difficultySelect">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label> -->
+          <div class="top-bar">
+  <span id="progressLabel">0 / 6 Found</span>
+   <button id="hintBtn" class="action-btn secondary" type="button">Hint</button>
+
+  <!-- <label class="select-wrap" for="difficultySelect">
+    <span>Difficulty</span>
+    <select id="difficultySelect">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </label> -->
+</div>
       </section>
       <section class="board-panel">
         <div id="selectionPreview" class="selection-preview">Drag to select a word</div>

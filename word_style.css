@@ -100,7 +100,7 @@ body {
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.88rem;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .select-wrap select {
@@ -157,7 +157,7 @@ body {
 .panel-heading p { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .progress-meta { color: var(--teal); font-weight: 700; white-space: nowrap; }
 
-.word-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.word-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;}
 
 .word-pill {
   position: relative;
@@ -392,7 +392,7 @@ body {
   .hero-block { flex-direction: column; }
   .header-actions { width: 100%; justify-content: flex-start; }
   .header-actions > * { flex: 1 1 160px; }
-  .select-wrap { justify-content: space-between; }
+  .select-wrap { justify-content: center; }
   .status-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -417,11 +417,11 @@ body {
   .app-shell { padding: 10px; }
   .game-card { padding: 12px; border-radius: 20px; }
   .game-title { font-size: clamp(1.8rem, 9vw, 2.4rem); }
-  .header-actions { gap: 8px; }
+  .header-actions { gap: 5px; }
   .header-actions > * { flex-basis: 100%; width: 100%; }
-  .select-wrap, .action-btn { width: 100%; }
+  /* .select-wrap, .action-btn { width: 100%; } */
   .select-wrap {
-    padding: 7px 10px;
+    padding: 5px 10px;
     gap: 8px;
     font-size: 0.78rem;
     min-height: 38px;
@@ -432,7 +432,7 @@ body {
     min-height: 28px;
   }
   .action-btn {
-    padding: 8px 12px;
+    padding: 5px 10px;
     font-size: 0.8rem;
     min-height: 38px;
   }
@@ -458,4 +458,16 @@ body {
   }
   .word-pill { padding: 7px 10px; font-size: 0.75rem; }
   .status-card { padding: 10px 12px; }
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* pushes them left & right */
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+#progressLabel {
+  white-space: nowrap;
 }
