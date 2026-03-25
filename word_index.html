@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eye Vision Challenge</title>
+<title>Word Game</title>
+</xai:function_call name="edit_file">
+<parameter name="path">WordSearch/word_index.html
   <link rel="stylesheet" href="word_style.css">
 </head>
 <body>
@@ -11,9 +13,9 @@
   <main class="app-shell">
     <section class="game-card">
       <header class="hero-block">
-        <div>
-          <h1 class="game-title">Eye Vision Challenge</h1>
-        </div>
+        <!-- <div>
+<h1 class="game-title">Word Search</h1>
+        </div> -->
         <div class="header-actions">
           <label class="select-wrap" for="difficultySelect">
             <span>Difficulty</span>
@@ -31,7 +33,7 @@
       <section class="word-panel">
         <div class="panel-heading">
           <div>
-            <h2>Target Words</h2>
+            <!-- <h2>Target Words</h2> -->
             <p>Find all hidden words before the timer ends.</p>
           </div>
           <div class="progress-meta">
@@ -41,11 +43,12 @@
         <div id="wordList" class="word-list"></div>
       </section>
       <section class="board-panel">
+        <div id="selectionPreview" class="selection-preview">Drag to select a word</div>
         <div id="boardArea" class="board-area">
           <div id="selectionLine" class="selection-line" aria-hidden="true"></div>
           <div id="grid" class="word-grid" aria-label="Word finder grid"></div>
         </div>
-        <div id="selectionPreview" class="selection-preview">Drag to select a word</div>
+        <!-- <div id="selectionPreview" class="selection-preview">Drag to select a word</div> -->
       </section>
       <section class="status-panel">
         <article class="status-card">

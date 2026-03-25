@@ -86,7 +86,7 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -100,6 +100,7 @@ body {
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.88rem;
+  flex-direction: column;
 }
 
 .select-wrap select {
@@ -120,6 +121,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  white-space: nowrap;
 }
 
 .action-btn:hover { transform: translateY(-1px); }
@@ -141,12 +143,12 @@ body {
   border-radius: 24px;
 }
 
-.word-panel { padding: 18px; margin-bottom: 16px; }
+.word-panel { padding: 18px; margin-bottom: 8px; }
 
 .panel-heading {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 4px;
   align-items: flex-start;
   margin-bottom: 12px;
 }
@@ -155,7 +157,7 @@ body {
 .panel-heading p { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .progress-meta { color: var(--teal); font-weight: 700; white-space: nowrap; }
 
-.word-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.word-list { display: flex; flex-wrap: wrap; gap: 5px; }
 
 .word-pill {
   position: relative;
@@ -271,18 +273,19 @@ body {
 .grid-cell.explode { animation: explode 440ms ease; }
 
 .selection-preview {
-  margin-top: 14px;
+  margin-bottom: 10px;
   text-align: center;
   color: var(--muted);
   min-height: 22px;
 }
 
 .status-panel {
-  margin-top: 16px;
+  margin-top: 8px;
   padding: 16px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
 
 .status-card {
@@ -290,13 +293,17 @@ body {
   background: linear-gradient(180deg, rgba(16, 40, 61, 0.92), rgba(10, 25, 39, 0.96));
   border: 1px solid var(--line);
   padding: 14px 16px;
+  flex: 1;              /* makes all cards equal width */
+  text-align: center;
+  padding: 10px;
 }
+
 
 .status-label {
   display: block;
   color: var(--muted);
   font-size: 0.78rem;
-  margin-bottom: 4px;
+  /* margin-bottom: 4px; */
 }
 
 .status-value {
@@ -309,7 +316,7 @@ body {
 .status-value.danger { color: var(--red); animation: flash 800ms linear infinite; }
 
 .toast-message {
-  margin-top: 14px;
+  /* margin-top: 14px; */
   min-height: 22px;
   color: var(--yellow);
   font-weight: 700;
@@ -396,12 +403,12 @@ body {
   .panel-heading { flex-direction: column; }
   .progress-meta { white-space: normal; }
   .word-panel, .board-panel, .status-panel { border-radius: 20px; }
-  .word-panel, .board-panel { padding: 14px; }
+  .word-panel, .board-panel { padding: 10px; }
   .word-grid { width: 100%; gap: 4px; }
   .grid-cell { border-radius: 10px; font-size: clamp(0.72rem, 2.8vw, 0.9rem); }
   .word-pill { padding: 8px 12px; font-size: 0.8rem; }
   .status-panel { grid-template-columns: 1fr 1fr; }
-  .status-card { padding: 12px 14px; border-radius: 16px; }
+  .status-card { padding: 5px 10px; border-radius: 16px; }
   .status-value { font-size: 1.05rem; }
   .modal-stats { grid-template-columns: 1fr; }
 }
@@ -437,7 +444,7 @@ body {
     border-width: 1px;
   }
   .selection-line { height: 6px; }
-  .status-panel { gap: 8px; padding: 12px; }
+  .status-panel { gap: 8px; padding: 10px; }
 }
 
 @media (max-width: 360px) {
